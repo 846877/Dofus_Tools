@@ -104,12 +104,13 @@ declare global {
     dofusTools?: {
       isDesktop: boolean;
       fetchJson: (url: string) => Promise<{ ok: boolean; status: number; data?: unknown; error?: string }>;
+      equipmentCatalog: (force?: boolean) => Promise<{ ok: boolean; stale?: boolean; data?: unknown; error?: string }>;
     };
   }
 }
 
 /** Dans l'application de bureau, la requête passe par Electron (pas de blocage CORS). */
-async function fetchJson(url: string): Promise<unknown> {
+export async function fetchJson(url: string): Promise<unknown> {
   if (typeof window !== 'undefined' && window.dofusTools?.fetchJson) {
     const r = await window.dofusTools.fetchJson(url);
     if (!r.ok) throw new Error(`API Dofus : ${r.error ?? r.status}`);
@@ -153,7 +154,9 @@ export async function searchEquipment(query: string, opts: { minLevel?: number; 
   return [...seen.values()];
 }
 
-export function getEquipment(id: number) {
+export function getEquipment(id: number): Promise<ApiItem> {
+  const cached = memoryItems.get(id);
+  if (cached) return Promise.resolve(cached);
   return getJson<ApiItem>(`/items/equipment/${id}`);
 }
 
@@ -187,3 +190,29 @@ export function effectRange(e: Effect): [number, number] {
   if (e.ignore_int_max || max === 0) return [min, min];
   return [Math.min(min, max), Math.max(min, max)];
 }
+
+let catalogPromise: Promise<ApiItem[]> | null = null;
+
+/** Tous les équipements du jeu (armes comprises), triés par niveau décroissant. */
+export function loadEquipmentCatalog(force = false): Promise<ApiItem[]> {
+  if (catalogPromise && !force) return catalogPromise;
+  catalogPromise = (async () => {
+    let data: unknown;
+    if (typeof window !== 'undefined' && window.dofusTools?.equipmentCatalog) {
+      const r = await window.dofusTools.equipmentCatalog(force);
+      if (!r.ok) throw new Error(`Catalogue indisponible : ${r.error}`);
+      data = r.data;
+    } else {
+      data = await fetchJson(`${API_BASE}/${GAME}/v1/${LANG}/items/equipment/all?sort[level]=desc`);
+    }
+    const items = asArray<ApiItem>(data);
+    if (items.length === 0) throw new Error('Catalogue vide');
+    for (const it of items) memoryItems.set(it.ankama_id, it);
+    return items;
+  })();
+  catalogPromise.catch(() => (catalogPromise = null));
+  return catalogPromise;
+}
+
+const memoryItems = new Map<number, ApiItem>();
+export const catalogItem = (id: number) => memoryItems.get(id);

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { searchEquipment, type ApiItem } from '../../lib/dofusApi';
-import { itemFitsSlot, type SlotDef } from './types';
+import { useEffect, useMemo, useState } from 'react';
+import { loadEquipmentCatalog, searchEquipment, type ApiItem } from '../../lib/dofusApi';
+import { itemFitsSlot, normalizeText, type SlotDef } from './types';
 import { EffectList, ItemIcon } from './ItemBits';
 
 interface Props {
@@ -10,38 +10,57 @@ interface Props {
   onClose: () => void;
 }
 
+const PAGE = 120;
+
 export default function ItemPicker({ slot, maxLevel, onPick, onClose }: Props) {
+  const [catalog, setCatalog] = useState<ApiItem[]>();
+  const [catalogError, setCatalogError] = useState<string>();
   const [query, setQuery] = useState('');
   const [minLvl, setMinLvl] = useState(1);
   const [maxLvl, setMaxLvl] = useState(maxLevel);
   const [onlySlot, setOnlySlot] = useState(true);
-  const [results, setResults] = useState<ApiItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>();
+  const [shownCount, setShownCount] = useState(PAGE);
   const [preview, setPreview] = useState<ApiItem>();
+  // Recherche en ligne, utilisée seulement si le catalogue complet n'a pas pu être chargé.
+  const [remote, setRemote] = useState<ApiItem[]>([]);
+  const [remoteError, setRemoteError] = useState<string>();
+
+  const load = (force = false) => {
+    setCatalogError(undefined);
+    loadEquipmentCatalog(force)
+      .then(setCatalog)
+      .catch((e: Error) => setCatalogError(e.message));
+  };
+  useEffect(() => load(), []);
 
   useEffect(() => {
+    if (catalog || !catalogError) return;
     const q = query.trim();
-    if (q.length < 2) {
-      setResults([]);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(undefined);
+    if (q.length < 2) return setRemote([]);
     const t = setTimeout(() => {
       searchEquipment(q, { minLevel: minLvl, maxLevel: maxLvl, limit: 100 })
-        .then((r) => !cancelled && setResults(r))
-        .catch((e: Error) => !cancelled && setError(e.message))
-        .finally(() => !cancelled && setLoading(false));
+        .then((r) => {
+          setRemote(r);
+          setRemoteError(undefined);
+        })
+        .catch((e: Error) => setRemoteError(e.message));
     }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [query, minLvl, maxLvl]);
+    return () => clearTimeout(t);
+  }, [catalog, catalogError, query, minLvl, maxLvl]);
 
-  const shown = onlySlot ? results.filter((i) => itemFitsSlot(slot, i)) : results;
+  useEffect(() => setShownCount(PAGE), [query, minLvl, maxLvl, onlySlot]);
+
+  const results = useMemo(() => {
+    const source = catalog ?? remote;
+    const q = normalizeText(query);
+    return source.filter((i) => {
+      if (onlySlot && !itemFitsSlot(slot, i)) return false;
+      const lvl = i.level ?? 0;
+      if (lvl < minLvl || lvl > maxLvl) return false;
+      if (q && !normalizeText(i.name).includes(q) && !normalizeText(i.parent_set?.name ?? '').includes(q)) return false;
+      return true;
+    });
+  }, [catalog, remote, query, minLvl, maxLvl, onlySlot, slot]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -56,7 +75,7 @@ export default function ItemPicker({ slot, maxLevel, onPick, onClose }: Props) {
           <input
             autoFocus
             className="input grow"
-            placeholder="Rechercher un objet (ex. Gelano, Bottes du Comte…)"
+            placeholder="Filtrer par nom d'objet ou de panoplie…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -73,35 +92,44 @@ export default function ItemPicker({ slot, maxLevel, onPick, onClose }: Props) {
         </div>
         <div className="picker-body">
           <div className="picker-list">
-            {query.trim().length < 2 && <p className="muted">Tapez au moins 2 lettres pour chercher dans les objets du jeu.</p>}
-            {loading && <p className="muted">Recherche…</p>}
-            {error && <p className="error">Impossible de joindre l'API des objets ({error}).</p>}
-            {!loading && !error && query.trim().length >= 2 && shown.length === 0 && (
-              <p className="muted">Aucun objet trouvé{onlySlot && results.length > 0 ? ' pour cet emplacement (décochez le filtre ?)' : ''}.</p>
+            {!catalog && !catalogError && <p className="muted">Chargement de tous les objets du jeu…</p>}
+            {catalogError && (
+              <div className="error small">
+                Le catalogue complet n'a pas pu être chargé ({catalogError}).{' '}
+                <button className="btn tiny" onClick={() => load(true)}>
+                  Réessayer
+                </button>
+                <div className="muted">En attendant, tapez un nom pour chercher en ligne.</div>
+                {remoteError && <div>Recherche en ligne : {remoteError}</div>}
+              </div>
             )}
-            {shown.map((item) => (
-              <button
-                key={item.ankama_id}
-                className={'picker-row' + (preview?.ankama_id === item.ankama_id ? ' selected' : '')}
-                onClick={() => setPreview(item)}
-                onDoubleClick={() => onPick(item)}
-              >
-                <ItemIcon item={item} />
-                <span className="grow">
-                  <strong>{item.name}</strong>
-                  <span className="muted small">
-                    {item.type?.name} · niv. {item.level}
-                    {item.parent_set?.name ? ` · ${item.parent_set.name}` : ''}
-                  </span>
-                </span>
+            {catalog && <p className="muted small">{results.length} objets</p>}
+            <div className="item-grid">
+              {results.slice(0, shownCount).map((item) => (
+                <button
+                  key={item.ankama_id}
+                  className={'item-card' + (preview?.ankama_id === item.ankama_id ? ' selected' : '')}
+                  onClick={() => setPreview(item)}
+                  onDoubleClick={() => onPick(item)}
+                  title={item.name}
+                >
+                  <ItemIcon item={item} size={56} />
+                  <span className="item-card-name">{item.name}</span>
+                  <span className="muted small">niv. {item.level}</span>
+                </button>
+              ))}
+            </div>
+            {results.length > shownCount && (
+              <button className="btn full" onClick={() => setShownCount((n) => n + PAGE)}>
+                Afficher plus ({results.length - shownCount} restants)
               </button>
-            ))}
+            )}
           </div>
           <div className="picker-preview">
             {preview ? (
               <>
                 <div className="preview-head">
-                  <ItemIcon item={preview} size={64} />
+                  <ItemIcon item={preview} size={72} />
                   <div>
                     <h4>{preview.name}</h4>
                     <div className="muted small">
@@ -116,7 +144,7 @@ export default function ItemPicker({ slot, maxLevel, onPick, onClose }: Props) {
                 </button>
               </>
             ) : (
-              <p className="muted">Sélectionnez un objet pour voir ses caractéristiques (double-clic pour équiper).</p>
+              <p className="muted">Cliquez sur un objet pour voir ses caractéristiques (double-clic pour l'équiper).</p>
             )}
           </div>
         </div>

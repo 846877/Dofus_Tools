@@ -76,11 +76,3 @@ export const BASE_DOFUS: DofusEntry[] = [
   d('Dofus Forgelave'),
 ];
 
-/** Liens de recherche externes pour trouver les guides d'un Dofus. */
-export function guideLinks(name: string) {
-  const q = encodeURIComponent(name);
-  return [
-    { label: 'Guide (recherche web)', url: `https://www.google.com/search?q=${q}+qu%C3%AAte+guide+dofus` },
-    { label: 'Encyclopédie officielle', url: `https://www.dofus.com/fr/mmorpg/encyclopedie/equipements?text=${q}` },
-  ];
-}

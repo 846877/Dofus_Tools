@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid } from '../../lib/id';
-import type { ApiItem } from '../../lib/dofusApi';
 import type { DofusStep } from './data';
+import type { DofusCatalog } from './loader';
 
 export interface DofusProgress {
   obtained: boolean;
@@ -11,19 +11,16 @@ export interface DofusProgress {
   notes?: string;
 }
 
-/** Données issues de l'API, mises en cache (nom, image, niveau, effets). */
-export type DofusApiInfo = Pick<ApiItem, 'ankama_id' | 'name' | 'level' | 'image_urls' | 'description' | 'effects'>;
-
 interface DofusState {
   progress: Record<string, DofusProgress>;
-  apiInfo: Record<string, DofusApiInfo>;
-  lastSync?: number;
+  /** Dofus, quêtes et succès issus des données du jeu (mis en cache) */
+  catalog?: DofusCatalog;
   toggleObtained: (id: string) => void;
   toggleStep: (id: string, stepId: string) => void;
   addStep: (id: string, step: Omit<DofusStep, 'id'>) => void;
   removeStep: (id: string, stepId: string) => void;
   setNotes: (id: string, notes: string) => void;
-  setApiInfo: (info: Record<string, DofusApiInfo>) => void;
+  setCatalog: (c: DofusCatalog) => void;
 }
 
 const empty = (): DofusProgress => ({ obtained: false, done: {}, customSteps: [] });
@@ -35,7 +32,6 @@ export const useDofus = create<DofusState>()(
         set({ progress: { ...get().progress, [id]: fn(get().progress[id] ?? empty()) } });
       return {
         progress: {},
-        apiInfo: {},
         toggleObtained: (id) => edit(id, (p) => ({ ...p, obtained: !p.obtained })),
         toggleStep: (id, stepId) => edit(id, (p) => ({ ...p, done: { ...p.done, [stepId]: !p.done[stepId] } })),
         addStep: (id, step) => edit(id, (p) => ({ ...p, customSteps: [...p.customSteps, { ...step, id: uid('step-') }] })),
@@ -46,10 +42,10 @@ export const useDofus = create<DofusState>()(
             return { ...p, done, customSteps: p.customSteps.filter((s) => s.id !== stepId) };
           }),
         setNotes: (id, notes) => edit(id, (p) => ({ ...p, notes })),
-        setApiInfo: (info) => set({ apiInfo: { ...get().apiInfo, ...info }, lastSync: Date.now() }),
+        setCatalog: (catalog) => set({ catalog }),
       };
     },
-    { name: 'dofus-tools:dofus', version: 1 },
+    { name: 'dofus-tools:dofus', version: 2, migrate: (s) => { const st = s as Record<string, unknown>; delete st.apiInfo; delete st.lastSync; return st as never; } },
   ),
 );
 

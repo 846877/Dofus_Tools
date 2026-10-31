@@ -33,7 +33,7 @@ export interface Run {
 }
 
 /**
- * Frigost complet : les donjons de l'île (Frigost I, II, III) dans l'ordre de progression.
+ * Frigost complet : les donjons de l'île de Frigost (I, II, III) dans l'ordre des niveaux du jeu (données DofusDB).
  * L'ordre et la liste sont modifiables dans l'application (bouton « Modifier l'ordre / les zones »).
  */
 export const FRIGOST_COMPLET: RunTemplate = {
@@ -41,21 +41,19 @@ export const FRIGOST_COMPLET: RunTemplate = {
   name: 'Frigost complet',
   builtin: true,
   zones: [
-    'Ben le Ripate',
-    'Mansot Royal',
-    'Royalmouth',
-    'Tengu Givrefoux',
-    'Kanigroula',
-    'Obsidiantre',
-    'Fuji Givrefoux',
-    'Korriandre',
-    'Kolosso',
-    'Glourséleste',
-    'Missiz Frizz',
-    'Sylargh',
-    'Klime',
-    'Nileza',
-    'Comte Harebourg',
+    'Royalmouth (Serre du Royalmouth, niv. 120)',
+    'Mansot Royal (Excavation du Mansot Royal, niv. 140)',
+    'Ben le Ripate (Épave du Grolandais violent, niv. 150)',
+    "Obsidiantre (Hypogée de l'Obsidiantre, niv. 160)",
+    'Tengu & Fuji Givrefoux (Tanière Givrefoux, niv. 170)',
+    'Korriandre (Antre du Korriandre, niv. 180)',
+    'Kolosso (Cavernes du Kolosso, niv. 190)',
+    'Glourséleste (Antichambre des Gloursons, niv. 190)',
+    'Missiz Frizz (Forgefroide de Missiz Frizz, niv. 200)',
+    'Sylargh (Transporteur de Sylargh, niv. 200)',
+    'Klime (Salons privés de Klime, niv. 200)',
+    'Nileza (Laboratoire de Nileza, niv. 200)',
+    'Comte Harebourg (Donjon du Comte Harebourg, niv. 200)',
   ],
 };
 

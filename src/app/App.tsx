@@ -27,7 +27,7 @@ export default function App() {
         </Routes>
       </main>
       <footer className="footer">
-        Données des objets : <a href="https://docs.dofusdu.de" target="_blank" rel="noreferrer">dofusdu.de</a> · Dofus est une marque
+        Données du jeu : <a href="https://docs.dofusdu.de" target="_blank" rel="noreferrer">dofusdu.de</a> et <a href="https://dofusdb.fr" target="_blank" rel="noreferrer">DofusDB</a> · Dofus est une marque
         d'Ankama, ce projet n'est pas affilié. Vos données restent sur votre PC.
       </footer>
     </div>

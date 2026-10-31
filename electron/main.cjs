@@ -1,6 +1,7 @@
 // Processus principal Electron : ouvre l'application Dofus Tools dans une fenêtre de bureau.
 const { app, BrowserWindow, shell, Menu, ipcMain, net } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs/promises');
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 
@@ -45,6 +46,35 @@ ipcMain.handle('fetch-json', async (_event, url) => {
     return { ok: true, status: res.status, data: JSON.parse(text) };
   } catch (e) {
     return { ok: false, status: 0, error: String(e && e.message ? e.message : e) };
+  }
+});
+
+// Catalogue complet des équipements (≈ 4 000 objets), mis en cache sur le disque 3 jours.
+const CATALOG_URL = 'https://api.dofusdu.de/dofus3/v1/fr/items/equipment/all?sort[level]=desc';
+const CATALOG_TTL = 3 * 24 * 3600 * 1000;
+ipcMain.handle('equipment-catalog', async (_event, force) => {
+  const file = path.join(app.getPath('userData'), 'equipment-catalog.json');
+  if (!force) {
+    try {
+      const stat = await fs.stat(file);
+      if (Date.now() - stat.mtimeMs < CATALOG_TTL) return { ok: true, data: JSON.parse(await fs.readFile(file, 'utf8')) };
+    } catch {
+      // pas encore de cache
+    }
+  }
+  try {
+    const res = await net.fetch(CATALOG_URL, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const text = await res.text();
+    await fs.writeFile(file, text, 'utf8');
+    return { ok: true, data: JSON.parse(text) };
+  } catch (e) {
+    // en cas d'échec réseau, on garde l'ancien cache s'il existe
+    try {
+      return { ok: true, stale: true, data: JSON.parse(await fs.readFile(file, 'utf8')) };
+    } catch {
+      return { ok: false, error: String(e && e.message ? e.message : e) };
+    }
   }
 });
 

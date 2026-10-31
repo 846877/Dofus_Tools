@@ -19,12 +19,12 @@ Pour une version avec lien de téléchargement direct, créer un tag `v0.1.0` : 
 
 | Onglet | Ce qu'il fait |
 | --- | --- |
-| 🛡️ **Stuff** | Théorycraft façon DofusBook : 16 emplacements, recherche dans tous les équipements du jeu, bonus de panoplie, jets personnalisables, points de caractéristiques et parchemins, totaux. Plusieurs stuffs, duplication, export/import JSON. |
-| ⏱️ **Runs** | Lancer une run multi-zones (préréglage **Frigost complet**, ou parcours personnalisés), chrono global + chrono par donjon, pause, zones passées, records par donjon et par parcours, historique avec notes. |
-| 🥚 **Dofus** | Collection de tous les Dofus avec progression : obtenu / manquant, quêtes et succès à cocher, notes, liens vers les guides. Le bouton « Synchroniser » récupère visuels, effets et Dofus manquants depuis les données du jeu. |
+| 🛡️ **Stuff** | Théorycraft façon DofusBook : 16 emplacements, catalogue complet des équipements du jeu avec visuels (filtré par emplacement, nom, niveau), bonus de panoplie, jets personnalisables, points de caractéristiques et parchemins, totaux. Plusieurs stuffs, duplication, export/import JSON. |
+| ⏱️ **Runs** | Lancer une run multi-zones faite dans l'ordre (préréglage **Frigost complet** : 13 donjons classés par niveau, ou parcours personnalisés), chrono global + chrono par donjon, pause, zones passées, records par donjon et par parcours, historique avec notes. |
+| 🥚 **Dofus** | Les 34 Dofus du jeu : obtenu / manquant, succès de série, quêtes dans l'ordre (niveau, quête de donjon), objets demandés, étapes perso et notes. |
 
-Les données des objets viennent de l'API communautaire [dofusdu.de](https://docs.dofusdu.de)
-(extraites du client Dofus 3), appelée directement depuis le navigateur et mise en cache.
+Données du jeu (Dofus 3) issues des API communautaires [dofusdu.de](https://docs.dofusdu.de) (équipements)
+et [DofusDB](https://dofusdb.fr) (Dofus, quêtes, succès), téléchargées par l'application et mises en cache sur le PC.
 
 ## Développement
 
