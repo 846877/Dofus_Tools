@@ -56,6 +56,12 @@ const DOFUS_TYPE_ID = 23;
 /** Succès de « série de quêtes » quand le Dofus n'est pas donné directement en récompense. */
 const MANUAL_ACHIEVEMENTS: Record<number, number[]> = {
   7754: [5220], // Dofus Ocre : « Ocre d'ambre »
+  8072: [9056], // Dofus Kaliptus : « Haleine fraîche » (Skeunk)
+  27803: [7761], // Dom de Pin : étape de la chaîne du Sylvestre
+  29134: [7761], // Dofus Sylvestre (doublon)
+  29135: [7761], // Dofus Verdoyant : même chaîne que le Sylvestre
+  20833: [2104], // Dofus Cacao : événement de Pâques « Chauuuuud cacao ! »
+  20987: [2104],
 };
 const QUEST_SERIES_CATEGORY = 40;
 
