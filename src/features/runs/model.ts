@@ -33,8 +33,8 @@ export interface Run {
 }
 
 /**
- * Frigost complet : les donjons de l'île (Frigost I, II, III) classés par niveau.
- * Liste modifiable dans l'application (modèles personnalisés).
+ * Frigost complet : les donjons de l'île (Frigost I, II, III) dans l'ordre de progression.
+ * L'ordre et la liste sont modifiables dans l'application (bouton « Modifier l'ordre / les zones »).
  */
 export const FRIGOST_COMPLET: RunTemplate = {
   id: 'builtin-frigost',
@@ -43,6 +43,7 @@ export const FRIGOST_COMPLET: RunTemplate = {
   zones: [
     'Ben le Ripate',
     'Mansot Royal',
+    'Royalmouth',
     'Tengu Givrefoux',
     'Kanigroula',
     'Obsidiantre',
@@ -94,7 +95,8 @@ export function completeZone(run: Run, index: number, now = Date.now(), status: 
     ...run,
     zones: run.zones.map((z, i) => (i === index ? { ...z, status, sw: stopSw(z.sw, now) } : z)),
   };
-  const following = nextTodoIndex(next, index + 1) >= 0 ? nextTodoIndex(next, index + 1) : nextTodoIndex(next);
+  // Les zones se font dans l'ordre : la suivante est la première encore « à faire ».
+  const following = nextTodoIndex(next);
   if (following < 0) return finishRun(next, now);
   if (next.autoNext) next = startZone(next, following, now);
   return next;

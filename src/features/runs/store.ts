@@ -37,4 +37,9 @@ export const useRuns = create<RunsState>()(
   ),
 );
 
-export const allTemplates = (custom: M.RunTemplate[]) => [...M.BUILTIN_TEMPLATES, ...custom];
+/** Parcours intégrés (éventuellement modifiés par l'utilisateur) puis parcours personnalisés. */
+export const allTemplates = (custom: M.RunTemplate[]) => {
+  const byId = new Map(custom.map((t) => [t.id, t]));
+  const builtins = M.BUILTIN_TEMPLATES.map((b) => (byId.has(b.id) ? { ...byId.get(b.id)!, builtin: true } : b));
+  return [...builtins, ...custom.filter((t) => !M.BUILTIN_TEMPLATES.some((b) => b.id === t.id))];
+};

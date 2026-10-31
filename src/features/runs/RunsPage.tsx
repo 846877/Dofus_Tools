@@ -56,8 +56,9 @@ function NewRun() {
         </select>
       </label>
       <div className="zone-pick">
-        {tpl.zones.map((z) => (
+        {tpl.zones.map((z, i) => (
           <label key={z} className="chip-check">
+            <span className="muted small">{i + 1}.</span>
             <input type="checkbox" checked={!excluded[z]} onChange={() => setExcluded({ ...excluded, [z]: !excluded[z] })} />
             {z}
           </label>
@@ -78,21 +79,22 @@ function NewRun() {
         <button className="btn" onClick={() => setEditing({ name: 'Mon parcours', zones: zones.join('\n') })}>
           Enregistrer comme parcours
         </button>
-        {!tpl.builtin && (
+        <button className="btn" onClick={() => setEditing({ id: tpl.id, name: tpl.name, zones: tpl.zones.join('\n') })}>
+          Modifier l'ordre / les zones
+        </button>
+        {(!tpl.builtin || templates.some((t) => t.id === tpl.id)) && (
           <>
-            <button className="btn" onClick={() => setEditing({ id: tpl.id, name: tpl.name, zones: tpl.zones.join('\n') })}>
-              Modifier
-            </button>
             <button
               className="btn danger"
               onClick={() => {
-                if (window.confirm(`Supprimer le parcours « ${tpl.name} » ?`)) {
+                const msg = tpl.builtin ? `Remettre « ${tpl.name} » par défaut ?` : `Supprimer le parcours « ${tpl.name} » ?`;
+                if (window.confirm(msg)) {
                   deleteTemplate(tpl.id);
-                  setTplId(all[0].id);
+                  if (!tpl.builtin) setTplId(all[0].id);
                 }
               }}
             >
-              Supprimer
+              {tpl.builtin ? 'Remettre par défaut' : 'Supprimer'}
             </button>
           </>
         )}
@@ -135,7 +137,7 @@ function RunTracker({ run, history }: { run: M.Run; history: M.Run[] }) {
   const best = useMemo(() => M.bestZoneTimes(history), [history]);
   const bestTotal = useMemo(() => M.bestRunTime(history, run.templateId), [history, run.templateId]);
   const activeIdx = M.activeZoneIndex(run);
-  const nextIdx = M.nextTodoIndex(run, Math.max(0, activeIdx)) >= 0 ? M.nextTodoIndex(run, Math.max(0, activeIdx)) : M.nextTodoIndex(run);
+  const nextIdx = M.nextTodoIndex(run);
   const doneCount = run.zones.filter((z) => z.status === 'done' || z.status === 'skipped').length;
   const act = (fn: (r: M.Run) => M.Run) => update(run.id, fn);
 
@@ -208,15 +210,12 @@ function RunTracker({ run, history }: { run: M.Run; history: M.Run[] }) {
           return (
             <li key={i} className={'zone ' + z.status}>
               <span className="zone-status">{{ todo: '○', active: '●', done: '✔', skipped: '↷' }[z.status]}</span>
-              <span className="grow">{z.name}</span>
+              <span className="grow">
+                <span className="muted small">{i + 1}.</span> {z.name}
+              </span>
               {pb !== undefined && <span className="muted small">PB {formatDuration(pb)}</span>}
               {diff !== undefined && <span className={'small ' + (diff <= 0 ? 'good' : 'neg')}>{(diff > 0 ? '+' : '') + formatDuration(diff)}</span>}
               <span className="zone-time">{time > 0 || z.status === 'active' ? formatDuration(time, z.status === 'active') : '—'}</span>
-              {z.status === 'todo' && i !== nextIdx && run.status === 'running' && (
-                <button className="btn tiny" title="Faire cette zone maintenant" onClick={() => act((r) => M.startZone(r, i, Date.now()))}>
-                  ▶
-                </button>
-              )}
               {(z.status === 'done' || z.status === 'skipped') && (
                 <button className="btn tiny" title="Remettre à faire" onClick={() => act((r) => M.reopenZone(r, i))}>
                   ↺

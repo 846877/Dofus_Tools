@@ -93,12 +93,36 @@ async function getJson<T>(path: string, params: Record<string, string | number |
       return cached;
     }
   }
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`API Dofus : ${res.status} ${res.statusText}`);
-  const data = (await res.json()) as T;
+  const data = (await fetchJson(url.toString())) as T;
   memoryCache.set(key, data);
   if (persist) writeLs(key, data);
   return data;
+}
+
+declare global {
+  interface Window {
+    dofusTools?: {
+      isDesktop: boolean;
+      fetchJson: (url: string) => Promise<{ ok: boolean; status: number; data?: unknown; error?: string }>;
+    };
+  }
+}
+
+/** Dans l'application de bureau, la requête passe par Electron (pas de blocage CORS). */
+async function fetchJson(url: string): Promise<unknown> {
+  if (typeof window !== 'undefined' && window.dofusTools?.fetchJson) {
+    const r = await window.dofusTools.fetchJson(url);
+    if (!r.ok) throw new Error(`API Dofus : ${r.error ?? r.status}`);
+    return r.data;
+  }
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    throw new Error(`API Dofus injoignable (${(e as Error).message})`);
+  }
+  if (!res.ok) throw new Error(`API Dofus : ${res.status} ${res.statusText}`);
+  return res.json();
 }
 
 function asArray<T>(data: unknown): T[] {
@@ -111,17 +135,22 @@ function asArray<T>(data: unknown): T[] {
 
 /** Recherche plein texte dans les équipements (armes comprises). */
 export async function searchEquipment(query: string, opts: { minLevel?: number; maxLevel?: number; limit?: number } = {}) {
-  const data = await getJson<unknown>(
-    '/items/equipment/search',
-    {
-      query,
-      limit: opts.limit ?? 60,
-      'filter[min_level]': opts.minLevel,
-      'filter[max_level]': opts.maxLevel,
-    },
-    false,
-  );
-  return asArray<ApiItem>(data);
+  const run = async (q: string) =>
+    asArray<ApiItem>(
+      await getJson<unknown>(
+        '/items/equipment/search',
+        { query: q, limit: opts.limit ?? 60, 'filter[min_level]': opts.minLevel, 'filter[max_level]': opts.maxLevel },
+        false,
+      ),
+    );
+  // La recherche de l'API est sensible à la casse : on essaie aussi avec une majuscule au début.
+  const variants = [...new Set([query, query.charAt(0).toUpperCase() + query.slice(1), query.toLowerCase()])];
+  const seen = new Map<number, ApiItem>();
+  for (const v of variants) {
+    for (const it of await run(v)) if (!seen.has(it.ankama_id)) seen.set(it.ankama_id, it);
+    if (seen.size > 0) break;
+  }
+  return [...seen.values()];
 }
 
 export function getEquipment(id: number) {
