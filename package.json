@@ -58,17 +58,17 @@
             "x64"
           ]
         }
-      ],
-      "artifactName": "${productName}-${version}-${arch}-${target}.${ext}"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Dofus Tools"
+      "shortcutName": "Dofus Tools",
+      "artifactName": "Dofus-Tools-${version}-installeur.${ext}"
     },
     "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}"
+      "artifactName": "Dofus-Tools-${version}-portable.${ext}"
     }
   }
 }

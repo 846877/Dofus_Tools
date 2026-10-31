@@ -5,8 +5,8 @@ avec export / import d'une sauvegarde depuis le menu **⚙️ Données**.
 
 ## Télécharger l'application
 
-- **Installeur** : `Dofus Tools-<version>-x64-nsis.exe` (raccourci bureau + menu Démarrer).
-- **Portable** : `Dofus Tools-<version>-portable.exe` (un seul fichier, aucune installation).
+- **Installeur** : `Dofus-Tools-<version>-installeur.exe` (raccourci bureau + menu Démarrer).
+- **Portable** : `Dofus-Tools-<version>-portable.exe` (un seul fichier, aucune installation).
 
 Les deux sont générés automatiquement par GitHub Actions (workflow *Application Windows*) :
 onglet **Actions** → dernière exécution → artefact **Dofus-Tools-Windows**.
