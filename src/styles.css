@@ -233,3 +233,19 @@ textarea.input { resize: vertical; margin-top: 10px; }
 .needed-items { list-style: none; padding: 0; margin: 0 0 8px; }
 .needed-items li { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
 .dofus-detail { max-height: calc(100vh - 100px); overflow: auto; }
+.quest { flex-direction: column; align-items: stretch !important; }
+.quest-head { display: flex; align-items: flex-start; gap: 6px; }
+.quest.done .quest-name { text-decoration: line-through; color: var(--muted); }
+.steps li.done span { text-decoration: none; color: inherit; }
+.quest-detail { border-left: 2px solid var(--accent-2); margin: 6px 0 2px 8px; padding-left: 10px; }
+.quest-step { margin-bottom: 10px; }
+.quest-step-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.quest-desc { margin: 2px 0 6px; white-space: pre-line; }
+.objectives { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.objectives li.done span { text-decoration: line-through; color: var(--muted); }
+.objectives .inline { align-items: flex-start; }
+.pos { color: var(--accent); font-variant-numeric: tabular-nums; }
+.rewards { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.reward { display: inline-flex; align-items: center; gap: 3px; background: var(--bg); border-radius: 6px; padding: 1px 6px; }
+.dofus-detail { max-height: none; }
+@media (min-width: 801px) { .layout-sidebar.reverse { grid-template-columns: 1fr 480px; } }

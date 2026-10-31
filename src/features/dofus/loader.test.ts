@@ -41,3 +41,17 @@ describe('loadDofusCatalog', () => {
     expect(ocre.achievements[0].name).toBe("Ocre d'ambre");
   });
 });
+
+import { dedupe } from './loader';
+describe('dedupe', () => {
+  it('garde un seul Dofus par nom, le plus complet', () => {
+    const base = { rewardQuestIds: [], items: [] };
+    const out = dedupe([
+      { ...base, key: 'a', itemId: 1, name: 'Dofus Cacao', level: 50, achievements: [] },
+      { ...base, key: 'b', itemId: 2, name: 'Dofus Cacao', level: 60, achievements: [{ id: 9, name: '', description: '', requires: [], questIds: [1] }] },
+      { ...base, key: 'c', itemId: 3, name: 'Dofus Ocre', achievements: [] },
+    ]);
+    expect(out.map((d) => d.itemId)).toEqual([2, 3]);
+    expect(out[0].key).toBe('dofus-cacao');
+  });
+});

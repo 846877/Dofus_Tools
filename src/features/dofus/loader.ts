@@ -173,5 +173,24 @@ export async function loadDofusCatalog(onProgress?: (msg: string) => void): Prom
   for (const [id, q] of quests) {
     questInfo[id] = { id, name: tr(q.name), levelMin: q.levelMin, levelMax: q.levelMax, dungeon: q.isDungeonQuest };
   }
-  return { loadedAt: Date.now(), dofus, quests: questInfo };
+  return { loadedAt: Date.now(), dofus: dedupe(dofus), quests: questInfo };
+}
+
+/**
+ * Le jeu contient plusieurs objets « Dofus » au même nom (anciennes versions, variantes d'événement…).
+ * On n'en garde qu'un par nom : celui qui a le plus de quêtes / succès liés, puis le niveau le plus haut.
+ */
+export function dedupe(list: DofusInfo[]): DofusInfo[] {
+  const score = (d: DofusInfo) =>
+    d.achievements.reduce((s, a) => s + 1 + a.questIds.length, 0) * 1000 + d.rewardQuestIds.length * 1000 + (d.level ?? 0);
+  const best = new Map<string, DofusInfo>();
+  for (const d of list) {
+    const k = normalizeText(d.name);
+    const cur = best.get(k);
+    // à égalité, l'id le plus récent (version échangeable, l'autre étant liée au personnage)
+    if (!cur || score(d) > score(cur) || (score(d) === score(cur) && d.itemId > cur.itemId)) best.set(k, d);
+  }
+  return list
+    .filter((d) => best.get(normalizeText(d.name)) === d)
+    .map((d) => ({ ...d, key: slugify(d.name) }));
 }

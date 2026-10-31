@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDate } from '../../lib/time';
 import { BASE_DOFUS, STEP_KIND_LABEL, type StepKind } from './data';
-import { loadDofusCatalog, type DofusCatalog, type DofusInfo } from './loader';
+import { dedupe, loadDofusCatalog, type DofusCatalog, type DofusInfo } from './loader';
 import { getProgress, useDofus, type DofusProgress } from './store';
+import { clearQuestCache, loadQuestDetail, type Position, type QuestDetail } from './questDetail';
 
 type Filter = 'tous' | 'manquants' | 'obtenus';
 
@@ -37,6 +38,7 @@ export default function DofusPage() {
     setError(undefined);
     setLoading('Chargement…');
     try {
+      clearQuestCache();
       setCatalog(await loadDofusCatalog(setLoading));
     } catch (e) {
       setError((e as Error).message);
@@ -51,7 +53,8 @@ export default function DofusPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const entries = catalog?.dofus.length ? catalog.dofus : fallback();
+  // dedupe aussi ici pour nettoyer les données déjà en cache
+  const entries = useMemo(() => (catalog?.dofus.length ? dedupe(catalog.dofus) : fallback()), [catalog]);
   const obtainedCount = entries.filter((e) => getProgress(progress, e.key).obtained).length;
   const shown = entries.filter((e) => {
     const o = getProgress(progress, e.key).obtained;
@@ -168,7 +171,7 @@ function DofusDetail({ entry, catalog }: { entry: DofusInfo; catalog?: DofusCata
           {a.questIds.length > 0 && (
             <ol className="steps">
               {a.questIds.map((qid) => (
-                <QuestRow key={qid} id={qid} info={quest(qid)} done={!!p.done[questKey(qid)]} onToggle={() => toggleStep(entry.key, questKey(qid))} />
+                <QuestRow key={qid} id={qid} info={quest(qid)} done={p.done} onToggle={(k) => toggleStep(entry.key, k)} />
               ))}
             </ol>
           )}
@@ -180,7 +183,7 @@ function DofusDetail({ entry, catalog }: { entry: DofusInfo; catalog?: DofusCata
           <h4>Quête qui donne le Dofus</h4>
           <ol className="steps">
             {otherQuests.map((qid) => (
-              <QuestRow key={qid} id={qid} info={quest(qid)} done={!!p.done[questKey(qid)]} onToggle={() => toggleStep(entry.key, questKey(qid))} />
+              <QuestRow key={qid} id={qid} info={quest(qid)} done={p.done} onToggle={(k) => toggleStep(entry.key, k)} />
             ))}
           </ol>
         </>
@@ -252,20 +255,97 @@ function DofusDetail({ entry, catalog }: { entry: DofusInfo; catalog?: DofusCata
   );
 }
 
-function QuestRow({ id, info, done, onToggle }: { id: number; info?: { name: string; levelMin?: number; levelMax?: number; dungeon?: boolean }; done: boolean; onToggle: () => void }) {
+const posLabel = (p?: Position) => (p ? `[${p.x},${p.y}]${p.zone ? ` ${p.zone}` : ''}` : '');
+
+function QuestRow({
+  id,
+  info,
+  done,
+  onToggle,
+}: {
+  id: number;
+  info?: { name: string; levelMin?: number; levelMax?: number; dungeon?: boolean };
+  done: Record<string, boolean>;
+  onToggle: (key: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<QuestDetail>();
+  const [error, setError] = useState<string>();
+  const isDone = !!done[questKey(id)];
   const lvl = info?.levelMin ? (info.levelMax && info.levelMax !== info.levelMin ? `niv. ${info.levelMin}-${info.levelMax}` : `niv. ${info.levelMin}`) : '';
+
+  useEffect(() => {
+    if (!open || detail) return;
+    setError(undefined);
+    loadQuestDetail(id)
+      .then(setDetail)
+      .catch((e: Error) => setError(e.message));
+  }, [open, detail, id]);
+
+  const objKeys = detail?.steps.flatMap((s) => s.objectives.map((o) => `o:${o.id}`)) ?? [];
+  const objDone = objKeys.filter((k) => done[k]).length;
+
   return (
-    <li className={done ? 'done' : ''}>
-      <label className="inline grow">
-        <input type="checkbox" checked={done} onChange={onToggle} />
-        <span>
-          {info?.name ?? `Quête ${id}`}
-          <span className="muted small">
-            {lvl && ` · ${lvl}`}
-            {info?.dungeon && ' · donjon'}
+    <li className={'quest' + (isDone ? ' done' : '')}>
+      <div className="quest-head">
+        <label className="inline grow">
+          <input type="checkbox" checked={isDone} onChange={() => onToggle(questKey(id))} />
+          <span className="quest-name">
+            {info?.name ?? `Quête ${id}`}
+            <span className="muted small">
+              {lvl && ` · ${lvl}`}
+              {info?.dungeon && ' · donjon'}
+              {detail && objKeys.length > 0 && ` · ${objDone}/${objKeys.length} objectifs`}
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+        <button className="btn tiny" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          {open ? '▾ Masquer' : '▸ Détail'}
+        </button>
+      </div>
+      {open && (
+        <div className="quest-detail">
+          {!detail && !error && <p className="muted small">Chargement du détail…</p>}
+          {error && <p className="error small">Détail indisponible : {error}</p>}
+          {detail?.start && (detail.start.npc || detail.start.position) && (
+            <p className="small">
+              <strong>Départ :</strong> {detail.start.npc ?? ''} {detail.start.position && <span className="pos">{posLabel(detail.start.position)}</span>}
+            </p>
+          )}
+          {detail?.steps.map((s, i) => (
+            <div key={s.id} className="quest-step">
+              <div className="quest-step-title">
+                Étape {i + 1} : {s.name}
+                {s.level ? <span className="muted small"> · niv. {s.level}</span> : null}
+              </div>
+              {s.description && <p className="muted small quest-desc">{s.description}</p>}
+              <ul className="objectives">
+                {s.objectives.map((o) => (
+                  <li key={o.id} className={done[`o:${o.id}`] ? 'done' : ''}>
+                    <label className="inline">
+                      <input type="checkbox" checked={!!done[`o:${o.id}`]} onChange={() => onToggle(`o:${o.id}`)} />
+                      <span>
+                        {o.text}
+                        {o.position && !o.text.includes(`[${o.position.x},${o.position.y}]`) && <span className="pos"> {posLabel(o.position)}</span>}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              {s.rewards.length > 0 && (
+                <div className="rewards small">
+                  <span className="muted">Récompenses :</span>
+                  {s.rewards.map((r) => (
+                    <span key={r.id} className="reward">
+                      {r.img && <img src={r.img} alt="" width={20} height={20} />} {r.name} ×{r.quantity}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </li>
   );
 }
