@@ -1,7 +1,19 @@
 # Dofus Tools
 
-Boîte à outils web pour Dofus (Dofus 3). Tout est sauvegardé localement dans le navigateur,
+Application Windows (.exe) pour Dofus (Dofus 3). Tout est sauvegardé localement sur le PC,
 avec export / import d'une sauvegarde depuis le menu **⚙️ Données**.
+
+## Télécharger l'application
+
+- **Installeur** : `Dofus Tools-<version>-x64-nsis.exe` (raccourci bureau + menu Démarrer).
+- **Portable** : `Dofus Tools-<version>-portable.exe` (un seul fichier, aucune installation).
+
+Les deux sont générés automatiquement par GitHub Actions (workflow *Application Windows*) :
+onglet **Actions** → dernière exécution → artefact **Dofus-Tools-Windows**.
+Pour une version avec lien de téléchargement direct, créer un tag `v0.1.0` : les .exe sont publiés dans **Releases**.
+
+> Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » car l'exécutable n'est pas signé :
+> cliquer sur **Informations complémentaires → Exécuter quand même**.
 
 ## Fonctionnalités
 
@@ -14,19 +26,17 @@ avec export / import d'une sauvegarde depuis le menu **⚙️ Données**.
 Les données des objets viennent de l'API communautaire [dofusdu.de](https://docs.dofusdu.de)
 (extraites du client Dofus 3), appelée directement depuis le navigateur et mise en cache.
 
-## Lancer en local
+## Développement
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm test         # tests unitaires (calculs de stats, chronos)
-npm run build    # build statique dans dist/
+npm run app:dev   # application de bureau avec rechargement à chaud
+npm run app       # application de bureau à partir du build
+npm test          # tests unitaires (calculs de stats, chronos)
+npm run dist:win  # crée les .exe dans release/ (à lancer sous Windows)
 ```
 
-## Mise en ligne
-
-Le workflow `.github/workflows/deploy.yml` publie l'application sur GitHub Pages à chaque push sur `main`.
-Il faut l'activer une fois : *Settings → Pages → Source : GitHub Actions*.
+L'application est faite en React + TypeScript (Vite) et empaquetée avec Electron (`electron/main.cjs`).
 
 ## Ajouter une fonctionnalité
 
@@ -34,6 +44,7 @@ Il faut l'activer une fois : *Settings → Pages → Source : GitHub Actions*.
 2. L'ajouter dans `src/app/features.tsx` : l'onglet et la route apparaissent automatiquement.
 
 ```
+electron/         fenêtre de bureau (Electron)
 src/
   app/            coquille (onglets, routes, menu sauvegarde)
   lib/            API Dofus, chronos, sauvegarde, utilitaires

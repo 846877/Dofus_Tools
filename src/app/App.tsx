@@ -28,7 +28,7 @@ export default function App() {
       </main>
       <footer className="footer">
         Données des objets : <a href="https://docs.dofusdu.de" target="_blank" rel="noreferrer">dofusdu.de</a> · Dofus est une marque
-        d'Ankama, ce projet n'est pas affilié. Vos données restent dans votre navigateur.
+        d'Ankama, ce projet n'est pas affilié. Vos données restent sur votre PC.
       </footer>
     </div>
   );
